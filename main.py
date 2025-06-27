@@ -17,7 +17,15 @@ DEFAULT_CAPTIONS = [
     "🤑 Ganhe bonus em cada rodada. Jogue agora no nosso canal oficial!"
 ]
 
+import os
+from telegram import Bot
+
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+if not TOKEN:
+    raise Exception("TELEGRAM_BOT_TOKEN not set!")
+
 bot = Bot(token=TOKEN)
+
 scheduler = BlockingScheduler()
 
 def send_image_with_caption():
