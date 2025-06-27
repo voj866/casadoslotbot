@@ -1,67 +1,44 @@
 import os
 import random
-import logging
 import time
-import asyncio
-from datetime import datetime
+import logging
 from telegram import Bot, InputFile
-from telegram.ext import Application, ContextTypes
-from dotenv import load_dotenv
+from apscheduler.schedulers.blocking import BlockingScheduler
 
-load_dotenv()
-
-BOT_TOKEN = os.getenv("TOKEN")
+# ====== 設定 ======
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHANNEL_ID = "@casadoslotbet"
-POST_INTERVAL = 3600  # 每 1 小時一次
-
-# 預設文案清單（AI 無法辨識圖片內容時使用）
-fallback_messages = [
-    "🎉 Muitas promoções incríveis estão te esperando no Casa do Slot! Aproveite agora!",
-    "💰 Bônus imperdíveis só hoje! Não perca!",
-    "🎰 Vem jogar com a gente e ganhe prêmios incríveis!",
-    "🔥 Promoções ativas 24h por dia, participe!",
+IMAGE_DIR = "images"
+DEFAULT_CAPTIONS = [
+    "🎁 Nao perca nossas promocoes incriveis hoje! Aproveite os bonus e ganhe mais!",
+    "💥 Novos premios esperam por voce! Entre agora e participe das ofertas!",
+    "🎰 Varios jogos de slot disponiveis com premios gigantes. Clique e jogue!",
+    "🔥 Oportunidades unicas hoje no CASA DO SLOT. Venha conferir!",
+    "🤑 Ganhe bonus em cada rodada. Jogue agora no nosso canal oficial!"
 ]
 
-# 模擬圖片 AI 分析
-def ai_generate_caption(filename):
-    name = filename.lower()
-    if "cashback" in name:
-        return "💸 Receba cashback em todas as suas apostas nos slots! Jogue agora!"
-    elif "bonus" in name:
-        return "🎁 Ganhe bônus especiais em seus depósitos! Até R$5.777!"
-    elif "deposito" in name:
-        return "💳 Faça seu segundo depósito e concorra a prêmios incríveis!"
-    else:
-        return random.choice(fallback_messages)
+bot = Bot(token=TOKEN)
+scheduler = BlockingScheduler()
 
-async def post_image(bot: Bot):
-    files = os.listdir("images")
-    image_file = random.choice(files)
-    image_path = f"images/{image_file}"
-    caption = ai_generate_caption(image_file)
+def send_image_with_caption():
+    try:
+        images = [f for f in os.listdir(IMAGE_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        if not images:
+            logging.warning("No images found.")
+            return
+        image_file = random.choice(images)
+        caption = random.choice(DEFAULT_CAPTIONS)
 
-    with open(image_path, "rb") as img:
-        await bot.send_photo(
-            chat_id=CHANNEL_ID,
-            photo=InputFile(img),
-            caption=caption + "\n\n👉 [Jogue agora](https://www.casadoslot.bet/m/home?affiliateCode=adselontg)",
-            parse_mode="Markdown"
-        )
-    print(f"[{datetime.now()}] 已發送圖片與文案：{image_file}")
+        with open(os.path.join(IMAGE_DIR, image_file), 'rb') as photo:
+            bot.send_photo(chat_id=CHANNEL_ID, photo=InputFile(photo), caption=caption)
+        logging.info(f"Sent: {image_file}")
+    except Exception as e:
+        logging.error(f"Error: {e}")
 
-async def loop_post(app: Application):
-    while True:
-        await post_image(app.bot)
-        await asyncio.sleep(POST_INTERVAL)
-
-async def main():
-    application = Application.builder().token(BOT_TOKEN).build()
-    asyncio.create_task(loop_post(application))
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-    await application.idle()
+# 每小時發送一次
+scheduler.add_job(send_image_with_caption, 'interval', hours=1)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+    send_image_with_caption()  # 啟動時先發送一次
+    scheduler.start()
