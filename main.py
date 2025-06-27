@@ -15,7 +15,7 @@ if not TOKEN:
 logging.info("✅ Token 成功讀取")
 bot = Bot(token=TOKEN)
 
-CHANNEL_ID = "@casadoslotbet"
+CHANNEL_ID = -1001234567890
 FALLBACK_CAPTIONS = [
     "Nao perca nossas promocoes especiais! 🎉",
     "Novos bonus e recompensas estao te esperando! 💸",
