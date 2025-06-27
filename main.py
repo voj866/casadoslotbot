@@ -16,6 +16,11 @@ if not TOKEN:
 logging.info("✅ Token 成功讀取")
 bot = Bot(token=TOKEN)
 
+updates = bot.get_updates()
+for update in updates:
+    if update.channel_post:
+        print("頻道 ID：", update.channel_post.chat.id)
+
 # ✅ 用你自己的 chat_id（數字，不加引號）
 CHANNEL_ID = 1069516114
 
