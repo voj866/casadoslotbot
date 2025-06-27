@@ -1,75 +1,67 @@
 import os
 import random
-import time
 import logging
 from telegram import Bot, InputFile
-from PIL import Image
+from apscheduler.schedulers.blocking import BlockingScheduler
 
-# 設定 log 等級
+# Logging 設定
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# 讀取環境變數中的 Token
+# 環境變數
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
 if not TOKEN:
     raise Exception("❌ TELEGRAM_BOT_TOKEN not set! 環境變數未傳入 Railway")
 
-logging.info("✅ Token 成功讀取")
 bot = Bot(token=TOKEN)
 
+# 嘗試抓取 chat_id
 updates = bot.get_updates()
 for update in updates:
     if update.channel_post:
-        print("頻道 ID：", update.channel_post.chat.id)
+        logger.info(f"📣 頻道 chat_id：{update.channel_post.chat.id}")
+    elif update.message:
+        logger.info(f"📩 來自聊天 chat_id：{update.message.chat.id}")
 
-# ✅ 用你自己的 chat_id（數字，不加引號）
-CHANNEL_ID = 1069516114
+# 測試訊息發送（請先確認你的頻道有 username 才能使用這行）
+try:
+    bot.send_message(chat_id="@casadoslotbet", text="✅ Bot 啟動成功（測試訊息）")
+except Exception as e:
+    logger.warning(f"⚠️ 發送測試訊息失敗：{e}")
 
-# 預設文案
-FALLBACK_CAPTIONS = [
-    "Nao perca nossas promocoes especiais! 🎉",
-    "Novos bonus e recompensas estao te esperando! 💸",
-    "Ganhe muito com nossas slots hoje! 🍀",
-    "Clique e participe das ofertas imperdiveis! 🤑"
-]
+# 頻道 chat_id（等你知道正確數字後要換掉）
+CHANNEL_ID = "@casadoslotbet"  # 或者像這樣：-1001234567890
 
-# 圖片資料夾路徑
-IMAGE_FOLDER = "images"
-
-# 模擬 AI 根據圖片產文
-def generate_caption_from_image(image_path):
-    keywords = ["jackpot", "bonus", "roleta", "cassino", "777", "dinheiro"]
-    keyword = random.choice(keywords)
-    return f"Ganhe premios incriveis com {keyword.upper()} hoje mesmo! 💥"
-
-# 發送圖片與文案
+# 發送隨機圖片與說明
 def send_random_post():
     try:
-        images = [f for f in os.listdir(IMAGE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        if not images:
-            logging.error("❌ 找不到任何圖片在 /images 資料夾中")
+        folder = "images"
+        files = os.listdir(folder)
+        image_files = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))]
+
+        if not image_files:
+            logger.warning("❌ 找不到圖片")
             return
 
-        image_file = random.choice(images)
-        image_path = os.path.join(IMAGE_FOLDER, image_file)
+        selected_image = random.choice(image_files)
+        image_path = os.path.join(folder, selected_image)
 
-        # 檢查圖片是否正常
-        try:
-            with Image.open(image_path) as img:
-                img.verify()
-            caption = generate_caption_from_image(image_path)
-        except Exception as e:
-            logging.warning(f"⚠️ AI 分析圖片失敗：{e}，改用預設文案")
-            caption = random.choice(FALLBACK_CAPTIONS)
+        # 隨機文字或固定文案
+        caption = f"你的圖片：{selected_image}"
 
-        with open(image_path, 'rb') as photo:
+        with open(image_path, "rb") as photo:
             bot.send_photo(chat_id=CHANNEL_ID, photo=InputFile(photo), caption=caption)
-            logging.info(f"✅ 已發送圖片：{image_file}")
+
+        logger.info(f"✅ 已發送圖片：{selected_image}")
 
     except Exception as e:
-        logging.error(f"❌ 發送過程出錯：{e}")
+        logger.error(f"❌ 發送圖片失敗：{e}")
 
-# 每小時一次
-if __name__ == "__main__":
-    while True:
-        send_random_post()
-        time.sleep(3600)
+# 測試立即發送一次
+send_random_post()
+
+# 設定排程：每小時執行一次
+scheduler = BlockingScheduler()
+scheduler.add_job(send_random_post, "interval", hours=1)
+scheduler.start()
