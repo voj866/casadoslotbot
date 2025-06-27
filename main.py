@@ -15,7 +15,7 @@ if not TOKEN:
 
 bot = Bot(token=TOKEN)
 
-# ✅ 使用數字 ID（不要用 @username）
+# ✅ 正確的數字頻道 ID
 CHANNEL_ID = "-1002712880070"
 
 # 圖片資料夾路徑
@@ -24,7 +24,7 @@ IMAGE_FOLDER = "images"
 # 預設文案
 DEFAULT_CAPTION = "🎰 Ganhe premios agora no CASA DO SLOT! 🎁 Cadastre-se e aproveite: https://casadoslot.com.br"
 
-# 可辨識圖名對應文案（範例）
+# 可辨識圖名對應文案（範例邏輯）
 KEYWORDS = {
     "jackpot": "🎉 Voce pode ganhar o JACKPOT hoje! Jogue agora!",
     "bonus": "💰 Bonus especial disponivel por tempo limitado!",
