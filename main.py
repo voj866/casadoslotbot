@@ -6,24 +6,25 @@ from telegram import Bot, InputFile
 from PIL import Image
 from dotenv import load_dotenv
 
-# 啟用 log 訊息
-logging.basicConfig(level=logging.INFO)
+# 設定 logging 輸出格式
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-# 嘗試讀取 .env（本地測試用）
+# 載入本地 .env 檔（本地開發時使用，Railway 環境不影響）
 load_dotenv()
 
-# 讀取環境變數中的 Token
+# 從環境變數中取得 Telegram token
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
-    raise Exception("TELEGRAM_BOT_TOKEN not set! (環境變數未傳入 Railway)")
+    raise Exception("❌ TELEGRAM_BOT_TOKEN not set! 環境變數未傳入 Railway")
 
-logging.info("✅ Token 成功讀取")
+# 建立 bot 實體
 bot = Bot(token=TOKEN)
-
-# 設定頻道 ID
 CHANNEL_ID = "@casadoslotbet"
 
-# 預設文案（當 AI 無法辨識圖片時）
+# 預設備用文案（AI 辨識失敗時使用）
 FALLBACK_CAPTIONS = [
     "Nao perca nossas promocoes especiais! 🎉",
     "Novos bonus e recompensas estao te esperando! 💸",
@@ -34,16 +35,19 @@ FALLBACK_CAPTIONS = [
 # 圖片資料夾路徑
 IMAGE_FOLDER = "images"
 
-# 模擬 AI 根據圖片內容產出文案
+# 模擬圖片 AI 分析回傳文案
 def generate_caption_from_image(image_path):
     keywords = ["jackpot", "bonus", "roleta", "cassino", "777", "dinheiro"]
     keyword = random.choice(keywords)
     return f"Ganhe premios incriveis com {keyword.upper()} hoje mesmo! 💥"
 
-# 發送圖片與文案到 Telegram 頻道
+# 發送 Telegram 圖片貼文
 def send_random_post():
     try:
-        images = [f for f in os.listdir(IMAGE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        images = [
+            f for f in os.listdir(IMAGE_FOLDER)
+            if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+        ]
         if not images:
             logging.error("❌ 找不到任何圖片在 /images 資料夾中")
             return
@@ -51,13 +55,13 @@ def send_random_post():
         image_file = random.choice(images)
         image_path = os.path.join(IMAGE_FOLDER, image_file)
 
-        # 驗證圖片是否為有效檔案
+        # 驗證圖片可讀性
         try:
             with Image.open(image_path) as img:
                 img.verify()
             caption = generate_caption_from_image(image_path)
         except Exception as e:
-            logging.warning(f"⚠️ AI 分析圖片失敗：{e}，改用預設文案")
+            logging.warning(f"⚠️ 圖片無法分析或損毀：{e}，改用預設文案")
             caption = random.choice(FALLBACK_CAPTIONS)
 
         with open(image_path, 'rb') as photo:
@@ -65,10 +69,11 @@ def send_random_post():
             logging.info(f"✅ 已發送圖片：{image_file}")
 
     except Exception as e:
-        logging.error(f"❌ 發送圖片過程中出錯：{e}")
+        logging.error(f"❌ 發送過程錯誤：{e}")
 
-# 每小時發送一次
+# 主流程：每 1 小時執行一次
 if __name__ == "__main__":
+    logging.info("🚀 Bot 開始執行，每小時自動發送圖片與文案...")
     while True:
         send_random_post()
         time.sleep(3600)
